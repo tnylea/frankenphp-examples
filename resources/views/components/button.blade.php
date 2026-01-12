@@ -1,0 +1,1 @@
+<button {{  $attributes }} class="w-full bg-black py-2 cursor-pointer text-white rounded-md">{{  $slot  }}</button>

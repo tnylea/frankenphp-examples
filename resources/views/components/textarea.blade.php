@@ -1,0 +1,1 @@
+<textarea {{ $attributes }} class="border border-stone-200 w-full min-h-[280px]"></textarea>
