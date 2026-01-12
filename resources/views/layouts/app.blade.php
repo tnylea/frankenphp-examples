@@ -15,7 +15,12 @@
         <main class="w-full max-w-2xl mx-auto flex flex-col items-stretch">
             <h1 class="text-2xl font-bold mb-5">FrankenPHP Isolated rendering examples</h1>
             <div class="flex items-stretch">
-                <aside class="w-64 shrink-0 bg-stone-100"></aside>
+                <aside class="w-32 shrink-0 bg-stone-100">
+                    <ul>
+                        <li><a href="{{ route('home') }}" class="hover:underline @if(Request::is('/')) underline @endif">Home</a></li>
+                        <li><a href="{{ route('string') }}" wire:current="underline" class="hover:underline">String</a></li>
+                    </ul>
+                </aside>
                 <div class="flex-1">{{ $slot }}</div>
             </div>
         </main>
