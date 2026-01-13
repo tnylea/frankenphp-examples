@@ -10,17 +10,31 @@ new class extends Component
 
     public function submitCode()
     {
-        $process = new Process(['./frankenphp', 'php-cli', '-r', $this->content]);
+        $code = $this->sanitizeCode($this->content);
+
+        $process = new Process(['./frankenphp', 'php-cli', '-r', $code]);
         $process->setWorkingDirectory(base_path());
         $process->run();
-        
+
         if (!$process->isSuccessful()) {
             // Handle error
             $error = $process->getErrorOutput();
             dd('Error: ' . $error);
         }
-        
+
         $this->output = $process->getOutput();
+    }
+
+    private function sanitizeCode(string $code): string
+    {
+        // Remove opening PHP tags (<?php or <?) from the beginning
+        $code = preg_replace('/^<\?php\s*/i', '', $code);
+        $code = preg_replace('/^<\?\s*/', '', $code);
+
+        // Remove closing PHP tag from the end
+        $code = preg_replace('/\s*\?' . '>$/', '', $code);
+
+        return $code;
     }
 };
 ?>

@@ -1,5 +1,6 @@
+@props(['content' => ''])
 <div x-data="{
-        monacoContent: '',
+        monacoContent: @js($content),
         monacoLanguage: 'php',
         monacoPlaceholder: true,
         monacoPlaceholderText: 'Start typing here',
@@ -31,48 +32,62 @@
         monacoEditorFocus(){
             document.getElementById(this.monacoId).dispatchEvent(new CustomEvent('monaco-editor-focused', { monacoId: this.monacoId }));
         },
-        monacoEditorAddLoaderScriptToHead() {
-            script = document.createElement('script');
+        initMonacoLoader() {
+            // Use a global flag to prevent loading the script multiple times
+            if (window.__monacoLoaderInitialized) return;
+            window.__monacoLoaderInitialized = true;
+
+            const script = document.createElement('script');
             script.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js';
             document.head.appendChild(script);
+        },
+        initMonacoEnvironment() {
+            // Only configure Monaco require once globally
+            if (window.__monacoEnvironmentReady) return;
+            window.__monacoEnvironmentReady = true;
+
+            require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' }});
+            const proxy = URL.createObjectURL(new Blob([` self.MonacoEnvironment = { baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min' }; importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/base/worker/workerMain.min.js');`], { type: 'text/javascript' }));
+            window.MonacoEnvironment = { getWorkerUrl: () => proxy };
+        },
+        initMonacoTheme() {
+            // Define theme once globally (must be called after monaco is loaded)
+            if (window.__monacoThemeReady) return;
+            window.__monacoThemeReady = true;
+
+            const monacoTheme = {'base':'vs-dark','inherit':true,'rules':[{'background':'0C1021','token':''},{'foreground':'aeaeae','token':'comment'},{'foreground':'d8fa3c','token':'constant'},{'foreground':'ff6400','token':'entity'},{'foreground':'fbde2d','token':'keyword'},{'foreground':'fbde2d','token':'storage'},{'foreground':'61ce3c','token':'string'},{'foreground':'61ce3c','token':'meta.verbatim'},{'foreground':'8da6ce','token':'support'},{'foreground':'ab2a1d','fontStyle':'italic','token':'invalid.deprecated'},{'foreground':'f8f8f8','background':'9d1e15','token':'invalid.illegal'},{'foreground':'ff6400','fontStyle':'italic','token':'entity.other.inherited-class'},{'foreground':'ff6400','token':'string constant.other.placeholder'},{'foreground':'becde6','token':'meta.function-call.py'},{'foreground':'7f90aa','token':'meta.tag'},{'foreground':'7f90aa','token':'meta.tag entity'},{'foreground':'ffffff','token':'entity.name.section'},{'foreground':'d5e0f3','token':'keyword.type.variant'},{'foreground':'f8f8f8','token':'source.ocaml keyword.operator.symbol'},{'foreground':'8da6ce','token':'source.ocaml keyword.operator.symbol.infix'},{'foreground':'8da6ce','token':'source.ocaml keyword.operator.symbol.prefix'},{'fontStyle':'underline','token':'source.ocaml keyword.operator.symbol.infix.floating-point'},{'fontStyle':'underline','token':'source.ocaml keyword.operator.symbol.prefix.floating-point'},{'fontStyle':'underline','token':'source.ocaml constant.numeric.floating-point'},{'background':'ffffff08','token':'text.tex.latex meta.function.environment'},{'background':'7a96fa08','token':'text.tex.latex meta.function.environment meta.function.environment'},{'foreground':'fbde2d','token':'text.tex.latex support.function'},{'foreground':'ffffff','token':'source.plist string.unquoted'},{'foreground':'ffffff','token':'source.plist keyword.operator'}],'colors':{'editor.foreground':'#F8F8F8','editor.background':'#0C1021','editor.selectionBackground':'#253B76','editor.lineHighlightBackground':'#FFFFFF0F','editorCursor.foreground':'#FFFFFFA6','editorWhitespace.foreground':'#FFFFFF40'}};
+            monaco.editor.defineTheme('blackboard', monacoTheme);
+        },
+        createEditor() {
+            document.getElementById(this.monacoId).editor = monaco.editor.create(this.$refs.monacoEditorElement, {
+                value: this.monacoContent,
+                theme: 'blackboard',
+                fontSize: this.monacoFontSize,
+                lineNumbersMinChars: 3,
+                automaticLayout: true,
+                language: this.monacoLanguage
+            });
+            this.monacoEditor(document.getElementById(this.monacoId).editor);
+            document.getElementById(this.monacoId).addEventListener('monaco-editor-focused', (event) => {
+                document.getElementById(this.monacoId).editor.focus();
+            });
+            this.updatePlaceholder(document.getElementById(this.monacoId).editor.getValue());
+            this.monacoLoader = false;
         }
     }"
     x-init="
-            
-        if(typeof _amdLoaderGlobal == 'undefined'){
-            monacoEditorAddLoaderScriptToHead();
-        }
+        initMonacoLoader();
 
-        monacoLoaderInterval = setInterval(function(){
-            if(typeof _amdLoaderGlobal !== 'undefined'){
-
-                // Based on https://jsfiddle.net/developit/bwgkr6uq/ which works without needing service worker. Provided by loader.min.js.
-                require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' }});
-                let proxy = URL.createObjectURL(new Blob([` self.MonacoEnvironment = { baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min' }; importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/base/worker/workerMain.min.js');`], { type: 'text/javascript' }));
-                window.MonacoEnvironment = { getWorkerUrl: () => proxy };
-
-                require(['vs/editor/editor.main'], function() {
-                    
-                    monacoTheme = {'base':'vs-dark','inherit':true,'rules':[{'background':'0C1021','token':''},{'foreground':'aeaeae','token':'comment'},{'foreground':'d8fa3c','token':'constant'},{'foreground':'ff6400','token':'entity'},{'foreground':'fbde2d','token':'keyword'},{'foreground':'fbde2d','token':'storage'},{'foreground':'61ce3c','token':'string'},{'foreground':'61ce3c','token':'meta.verbatim'},{'foreground':'8da6ce','token':'support'},{'foreground':'ab2a1d','fontStyle':'italic','token':'invalid.deprecated'},{'foreground':'f8f8f8','background':'9d1e15','token':'invalid.illegal'},{'foreground':'ff6400','fontStyle':'italic','token':'entity.other.inherited-class'},{'foreground':'ff6400','token':'string constant.other.placeholder'},{'foreground':'becde6','token':'meta.function-call.py'},{'foreground':'7f90aa','token':'meta.tag'},{'foreground':'7f90aa','token':'meta.tag entity'},{'foreground':'ffffff','token':'entity.name.section'},{'foreground':'d5e0f3','token':'keyword.type.variant'},{'foreground':'f8f8f8','token':'source.ocaml keyword.operator.symbol'},{'foreground':'8da6ce','token':'source.ocaml keyword.operator.symbol.infix'},{'foreground':'8da6ce','token':'source.ocaml keyword.operator.symbol.prefix'},{'fontStyle':'underline','token':'source.ocaml keyword.operator.symbol.infix.floating-point'},{'fontStyle':'underline','token':'source.ocaml keyword.operator.symbol.prefix.floating-point'},{'fontStyle':'underline','token':'source.ocaml constant.numeric.floating-point'},{'background':'ffffff08','token':'text.tex.latex meta.function.environment'},{'background':'7a96fa08','token':'text.tex.latex meta.function.environment meta.function.environment'},{'foreground':'fbde2d','token':'text.tex.latex support.function'},{'foreground':'ffffff','token':'source.plist string.unquoted'},{'foreground':'ffffff','token':'source.plist keyword.operator'}],'colors':{'editor.foreground':'#F8F8F8','editor.background':'#0C1021','editor.selectionBackground':'#253B76','editor.lineHighlightBackground':'#FFFFFF0F','editorCursor.foreground':'#FFFFFFA6','editorWhitespace.foreground':'#FFFFFF40'}};
-                    monaco.editor.defineTheme('blackboard', monacoTheme);
-                    document.getElementById(monacoId).editor = monaco.editor.create($refs.monacoEditorElement, {
-                        value: monacoContent,
-                        theme: 'blackboard',
-                        fontSize: monacoFontSize,
-                        lineNumbersMinChars: 3,
-                        automaticLayout: true,
-                        language: monacoLanguage
-                    });
-                    monacoEditor(document.getElementById(monacoId).editor);
-                    document.getElementById(monacoId).addEventListener('monaco-editor-focused', function(event){
-                        document.getElementById(monacoId).editor.focus();
-                    });
-                    updatePlaceholder(document.getElementById(monacoId).editor.getValue());
-                    
-                });
-
+        const monacoLoaderInterval = setInterval(() => {
+            if (typeof _amdLoaderGlobal !== 'undefined') {
                 clearInterval(monacoLoaderInterval);
-                monacoLoader = false;
+
+                initMonacoEnvironment();
+
+                require(['vs/editor/editor.main'], () => {
+                    initMonacoTheme();
+                    createEditor();
+                });
             }
         }, 5);
     " :id="monacoId" class="flex flex-col items-center relative justify-start w-full bg-[#0C1021] min-h-[250px] pt-3 h-100"  wire:ignore>
